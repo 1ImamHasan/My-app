@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>মাসিক বাজেট ও ব্যয় ট্র্যাকার - ফাইল সংরক্ষণ</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="error-boundary">
+        <i class="fas fa-exclamation-triangle fa-3x" style="color: #e74c3c; margin-bottom: 20px;"></i>
+        <h2>অ্যাপে একটি সমস্যা হয়েছে</h2>
+        <p>দুঃখিত, আমাদের অ্যাপ্লিকেশনে একটি ত্রুটি ঘটেছে। আপনি পৃষ্ঠাটি রিফ্রেশ করে আবার চেষ্টা করতে পারেন।</p>
+        <p id="error-details"></p>
+        <button id="refresh-app">পৃষ্ঠা রিফ্রেশ করুন</button>
+    </div>
+    
+    <div id="notification-center"></div>
+    
+    <div id="onboarding-overlay"></div>
+    <div id="onboarding-tooltip">
+        <h3 id="onboarding-title"></h3>
+        <p id="onboarding-description"></p>
+        <div class="tooltip-buttons">
+            <button id="onboarding-prev">পূর্ববর্তী</button>
+            <button id="onboarding-next">পরবর্তী</button>
+            <button id="onboarding-skip">বাদ দিন</button>
+        </div>
+    </div>
+    
+    <div id="settings-panel">
+        <h3><i class="fas fa-cog"></i> সেটিংস</h3>
+        <div class="setting-item">
+            <label>
+                <span>বাজেট সতর্কতা</span>
+                <div class="toggle-switch">
+                    <input type="checkbox" id="budget-alerts-toggle" checked>
+                    <span class="toggle-slider"></span>
+                </div>
+            </label>
+        </div>
+        <div class="setting-item">
+            <label>
+                <span>মাসিক রিমাইন্ডার</span>
+                <div class="toggle-switch">
+                    <input type="checkbox" id="monthly-reminder-toggle" checked>
+                    <span class="toggle-slider"></span>
+                </div>
+            </label>
+        </div>
+        <div class="setting-item">
+            <label>
+                <span>ডার্ক মোড</span>
+                <div class="toggle-switch">
+                    <input type="checkbox" id="dark-mode-toggle">
+                    <span class="toggle-slider"></span>
+                </div>
+            </label>
+        </div>
+        <button id="restart-tutorial" class="export-btn" style="background: var(--export); margin-top: 10px;">
+            <i class="fas fa-graduation-cap"></i> টিউটোরিয়াল আবার শুরু করুন
+        </button>
+    </div>
+
+    <header>
+        <h1><i class="fas fa-wallet"></i> মাসিক বাজেট ও ব্যয় ট্র্যাকার</h1>
+        <p>আপনার মাসিক বাজেটের বিপরীতে ব্যয় ট্র্যাক করুন</p>
+    </header>
+    
+    <!-- Balance Display Card -->
+    <section id="balance-display">
+        <div id="balance-card">
+            <h2><i class="fas fa-chart-line"></i> আর্থিক সারাংশ</h2>
+            <hr>
+            <p><strong><i class="fas fa-calendar-alt icon"></i> মাসিক বাজেট:</strong> <span id="monthly-budget">৳0.00</span></p>
+            <p><strong><i class="fas fa-shopping-cart icon"></i> চলতি মাসের ব্যয়:</strong> <span id="current-month-expenses">৳0.00</span></p>
+            <hr>
+            <p><strong><i class="fas fa-coins icon"></i> অবশিষ্ট ব্যালেন্স:</strong> <span id="remaining-balance">৳0.00</span></p>
+        </div>
+    </section>
+
+    <!-- Budget Display -->
+    <section id="budget-display">
+        <div id="budget-card">
+            <h3><i class="fas fa-tachometer-alt"></i> বাজেট ব্যবহার</h3>
+            <div>
+                <span id="budget-percentage">0%</span>
+                <div id="budget-progress">
+                    <div id="budget-progress-bar"></div>
+                </div>
+                <div class="budget-status">
+                    <span id="budget-used">৳0.00 ব্যবহৃত</span>
+                    <span id="budget-remaining">৳0.00 অবশিষ্ট</span>
+                </div>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Expense Chart -->
+    <section id="expense-chart">
+        <h3><i class="fas fa-chart-pie"></i> বিভাগ অনুযায়ী ব্যয়</h3>
+        <div class="chart-container" id="chart-container">
+            <!-- Chart bars will be generated dynamically -->
+            <div class="empty-state">
+                <i class="fas fa-chart-bar"></i>
+                <p>কোনো ব্যয় যোগ করা হয়নি</p>
+            </div>
+        </div>
+    </section>
+    
+    <!-- Alert Message -->
+    <section id="alert-section" style="padding: 0 15px;">
+        <div id="success-alert" class="alert alert-success">
+            <i class="fas fa-check-circle"></i> <span id="success-message"></span>
+        </div>
+        <div id="error-alert" class="alert alert-error">
+            <i class="fas fa-exclamation-circle"></i> <span id="error-message"></span>
+        </div>
+        <div id="warning-alert" class="alert alert-warning">
+            <i class="fas fa-exclamation-triangle"></i> <span id="warning-message"></span>
+        </div>
+        <div id="info-alert" class="alert alert-info">
+            <i class="fas fa-info-circle"></i> <span id="info-message"></span>
+        </div>
+    </section>
+
+    <!-- Expense Entry Form -->
+    <section id="expense-form" class="form-popup">
+        <div class="close-btn">&times;</div>
+        <h3>নতুন ব্যয় যোগ করুন</h3>
+        <form id="expenseForm">
+            <label for="expense-name">ব্যয়ের নাম:</label>
+            <input type="text" id="expense-name" required placeholder="ব্যয়ের নাম লিখুন">
+
+            <label for="expense-amount">পরিমাণ (৳):</label>
+            <input type="number" id="expense-amount" required min="0.01" step="0.01" placeholder="টাকার পরিমাণ লিখুন">
+
+            <label for="expense-date">তারিখ:</label>
+            <input type="date" id="expense-date" required>
+
+            <label for="expense-category">বিভাগ:</label>
+            <select id="expense-category" required>
+                <option value="">বিভাগ নির্বাচন করুন</option>
+                <option value="Food">খাদ্য ও ডাইনিং</option>
+                <option value="Transport">পরিবহন</option>
+                <option value="Shopping">কেনাকাটা</option>
+                <option value="Housing">বাসস্থান</option>
+                <option value="Entertainment">বিনোদন</option>
+                <option value="Healthcare">স্বাস্থ্যসেবা</option>
+                <option value="Education">শিক্ষা</option>
+                <option value="Other">অন্যান্য</option>
+            </select>
+
+            <button type="submit" id="add-expense-btn">ব্যয় যোগ করুন</button>
+        </form>
+    </section>
+
+    <!-- Budget Entry Form -->
+    <section id="budget-form" class="form-popup">
+        <div class="close-btn">&times;</div>
+        <h3>মাসিক বাজেট সেট করুন</h3>
+        <form id="budgetForm">
+            <label for="monthly-budget-input">বাজেট পরিমাণ (৳):</label>
+            <input type="number" id="monthly-budget-input" required min="0.01" step="0.01" placeholder="মাসিক বাজেট লিখুন">
+
+            <button type="submit" id="set-budget-btn">বাজেট সেট করুন</button>
+        </form>
+    </section>
+
+    <!-- Feedback Form -->
+    <section id="feedback-form" class="form-popup">
+        <div class="close-btn">&times;</div>
+        <h3>ফিডব্যাক পাঠান</h3>
+        <form id="feedbackForm">
+            <label for="feedback-name">আপনার নাম:</label>
+            <input type="text" id="feedback-name" required placeholder="আপনার নাম লিখুন">
+
+            <label for="feedback-email">ইমেইল:</label>
+            <input type="email" id="feedback-email" required placeholder="আপনার ইমেইল লিখুন">
+
+            <label for="feedback-message">বার্তা:</label>
+            <textarea id="feedback-message" rows="4" required placeholder="আপনার ফিডব্যাক লিখুন"></textarea>
+
+            <button type="submit">ফিডব্যাক পাঠান</button>
+        </form>
+    </section>
+
+    <!-- Export Options Modal -->
+    <section id="export-options" class="form-popup">
+        <div class="close-btn">&times;</div>
+        <h3>ফাইল সংরক্ষণ</h3>
+        <div class="export-options">
+            <button id="export-text-btn" class="export-btn export-text">
+                <i class="fas fa-file-alt"></i> টেক্সট ফাইল (.txt)
+            </button>
+            <button id="export-pdf-btn" class="export-btn export-pdf">
+                <i class="fas fa-file-pdf"></i> পিডিএফ ফাইল (.pdf)
+            </button>
+        </div>
+    </section>
+
+    <!-- Dynamic Table -->
+    <section id="expense-table-section">
+        <h3><i class="fas fa-receipt"></i> সাম্প্রতিক ব্যয়</h3>
+        <table id="expense-table">
+            <thead>
+                <tr>
+                    <th>ব্যয়ের নাম</th>
+                    <th>পরিমাণ</th>
+                    <th>তারিখ</th>
+                    <th>বিভাগ</th>
+                    <th>অ্যাকশন</th>
+                </tr>
+            </thead>
+            <tbody id="table-body">
+                <!-- Rows will be populated dynamically -->
+                <tr class="empty-row">
+                    <td colspan="5">
+                        <div class="empty-state">
+                            <i class="fas fa-receipt"></i>
+                            <p>কোনো ব্যয় যোগ করা হয়নি</p>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+    
+    <footer>
+        <p>&copy; ২০২৪ মাসিক বাজেট ট্র্যাকার। সর্বস্বত্ব সংরক্ষিত।</p>
+        <p>নির্মাতা: ইমাম হাসান | 
+            <a href="https://www.facebook.com/imam.hasan.281291" target="_blank">Facebook প্রোফাইল</a>
+        </p>
+    </footer>
+
+    <!-- Bottom Navigation Bar -->
+    <nav id="bottom-nav">
+        <button id="settings-btn" class="nav-btn">
+            <i class="fas fa-cog"></i>
+            <span>সেটিংস</span>
+        </button>
+        <button id="delete-all-btn" class="nav-btn delete-all">
+            <i class="fas fa-trash"></i>
+            <span>সব মুছুন</span>
+        </button>
+        <button id="feedback-btn" class="nav-btn feedback">
+            <i class="fas fa-comment"></i>
+            <span>ফিডব্যাক</span>
+        </button>
+        <button id="export-btn" class="nav-btn export">
+            <i class="fas fa-file-export"></i>
+            <span>ফাইল সংরক্ষণ</span>
+        </button>
+        <button id="add-budget-fab" class="nav-btn">
+            <i class="fas fa-wallet"></i>
+            <span>বাজেট</span>
+        </button>
+        <button id="add-expense-fab" class="nav-btn add-expense">
+            <i class="fas fa-plus"></i>
+            <span>যোগ করুন</span>
+        </button>
+    </nav>
+    <!-- Custom JS -->
+    <script src="script.js"></script>
+</body>
+</html>
